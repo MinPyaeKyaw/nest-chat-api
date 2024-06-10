@@ -1,41 +1,26 @@
-# Stage 1: Build the application
-FROM node:18-alpine AS builder
+# Use the official Node.js image as the base image
+FROM node:18
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy package.json and package-lock.json (or yarn.lock) to the working directory
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of the application
+# Copy the rest of the application code to the working directory
 COPY . .
+
+RUN npx prisma generate
+RUN npx prisma migrate dev
 
 # Build the NestJS application
 RUN npm run build
 
-# Stage 2: Run the application
-FROM node:18-alpine
+# Expose the application port
+EXPOSE 2000
 
-# Set working directory
-WORKDIR /usr/src/app
-
-# Copy package.json and package-lock.json
-COPY package*.json ./
-
-# Install only production dependencies
-RUN npm install --only=production
-
-# Copy build output from the builder stage
-COPY --from=builder /usr/src/app/dist ./dist
-
-# Copy any additional required files, such as configuration files
-COPY --from=builder /usr/src/app/.env ./
-
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Command to run the application
-CMD ["node", "dist/main"]
+# Define the command to run the application
+CMD ["npm", "run", "start:dev"]
